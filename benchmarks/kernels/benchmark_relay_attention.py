@@ -19,9 +19,9 @@ def main(args):
     rank = int(os.getenv("RANK", "-1"))
     local_rank = int(os.getenv("LOCAL_RANK", "0"))
     cuda_visible_device = int(os.getenv('CUDA_VISIBLE_DEVICES'))
-    slurm_proc_id = int(os.getenv('SLURM_PROCID'))
+    # slurm_proc_id = int(os.getenv('SLURM_PROCID'))
 
-    print(dict(rank=rank, local_rank=local_rank, cuda_visible_device=cuda_visible_device, slurm_proc_id=slurm_proc_id))
+    # print(dict(rank=rank, local_rank=local_rank, cuda_visible_device=cuda_visible_device, slurm_proc_id=slurm_proc_id))
 
     assert args.num_query_heads % args.num_kv_heads == 0
 
