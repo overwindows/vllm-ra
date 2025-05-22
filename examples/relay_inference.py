@@ -14,11 +14,12 @@ prompts = [
 # Create a sampling params object.
 sampling_params = SamplingParams(temperature=0.8, top_p=0.95, max_tokens=256)
 mode = 'relay'
+# mode = 'concat'
 # model = 'TheBloke/Llama-2-7b-Chat-AWQ'
 # quant = 'awq'
 
 
-model = '/mnt/lustrenew/zhulei1/ssd_cache/huggingface/local/Llama-2-7b-chat-hf'
+model = '/nvmedata/hf_checkpoints/Llama-2-7b-chat-hf-bf16'
 quant = None
 
 # mode='relay'
