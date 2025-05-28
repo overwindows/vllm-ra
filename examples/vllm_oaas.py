@@ -77,7 +77,7 @@ class VLLMOAAS:
         # print(outputs)
         for o in outputs:
             generated_text = o.outputs[0].text
-            print(generated_text)
+            # print(generated_text)
 
 
 if __name__ == "__main__":
@@ -96,7 +96,7 @@ if __name__ == "__main__":
                 # print(line)
                 # print(vllm_oaas.run(line))
                 resp = vllm_oaas.run(line)
-                print(resp)
+                # print(resp)
             tm1 = time.time()
             total_times.append(tm1 - tm0)
 

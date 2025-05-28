@@ -7,10 +7,10 @@ import tqdm
 
 class VLLMOAAS:
     def __init__(self):
-        #self.model_id = 'mistralai/Mistral-7B-Instruct-v0.3'
+        self.model_id = 'mistralai/Mistral-7B-Instruct-v0.3'
         # self.model_id = 'Qwen/Qwen3-32B'
         # self.model_id = "/Model"
-        self.model_id = 'microsoft/Phi-3.5-mini-instruct'
+        # self.model_id = 'microsoft/Phi-3.5-mini-instruct'
         from vllm.engine.async_llm_engine import AsyncLLMEngine
         from vllm.engine.arg_utils import AsyncEngineArgs
         
@@ -40,20 +40,19 @@ class VLLMOAAS:
         #    async for output in self.engine.generate(user_prompt, sampling_params, request_id):
         #        final_output = output
         #    return final_output.outputs[0].text if final_output else ""
-                
-        results_generator = self.engine.generate(user_prompt, sampling_params, request_id)
 
+        results_generator = self.engine.generate(user_prompt, sampling_params, request_id)
         # Non-streaming case
         final_output = None
         async for request_output in results_generator:
             final_output = request_output
-
         assert final_output is not None
         generated_text = [final_output.outputs[0].text]
+        # print(generated_text)
         return json.dumps(generated_text)
 
     async def run_batch_async(self, batch):
-        tasks = [self.async_run(line) for line in batch]
+        tasks = [self.async_run(json.loads(line)) for line in batch]
         return await asyncio.gather(*tasks)
 
 if __name__ == "__main__":
@@ -79,8 +78,7 @@ if __name__ == "__main__":
                     responses = loop.run_until_complete(
                         vllm_oaas.run_batch_async(batch)
                     )
-                    print(responses)
-                    breakpoint()
+                    # print(responses)
                 except Exception as e:
                     print(f"Batch failed with error: {e}")
                 batch = []
