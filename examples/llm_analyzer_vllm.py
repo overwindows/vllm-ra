@@ -164,7 +164,8 @@ class Qwen3Caller:
             messages_list = messages.get("messages", [])
             completion = self.client.chat.completions.create(
                 model="/nvmedata/hf_checkpoints/Qwen3-8B/",
-                messages=messages_list
+                messages=messages_list,
+                # extra_body={"chat_template_kwargs": {"enable_thinking": False}}
             )
             return completion.dict()
         except Exception as e:
