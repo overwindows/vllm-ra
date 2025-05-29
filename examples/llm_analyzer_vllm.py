@@ -17,8 +17,9 @@ import time
 import random
 import datetime
 from typing import List, Dict, Any, Callable
-from content_retriever import search_bing_web
-
+from openai import OpenAI
+# from content_retriever import search_bing_web
+import pandas as pd
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -43,7 +44,6 @@ def prepare_history_analysis_prompt(user_profile: Dict) -> Dict:
     
     # Add demographic context to the prompt
     demographic_context = f"Age: {age}\nGender: {gender}\n\n"
-    
     # Create interests list string with categories and keywords
     interests_text = []
     if interests:
@@ -142,14 +142,42 @@ def resolve_ambiguities(inferred_interests: List[Dict], bing_api_key: str) -> Li
     
     return enriched_interests
 
+class Qwen3Caller:
+    def __init__(self, base_url: str = 'http://127.0.0.1:8000/v1'):
+        self.client = OpenAI(
+            base_url=base_url,
+            api_key="token-abc123",
+        )
+    
+    def __call__(self, messages: Dict) -> Dict:
+        """
+        Make the class callable to handle API requests.
+        
+        Args:
+            messages: Dictionary containing the messages for the API request
+            
+        Returns:
+            Dict: API response containing the model's output
+        """
+        try:
+            # Extract the messages list from the dictionary
+            messages_list = messages.get("messages", [])
+            completion = self.client.chat.completions.create(
+                model="/nvmedata/hf_checkpoints/Qwen3-8B/",
+                messages=messages_list
+            )
+            return completion.dict()
+        except Exception as e:
+            logger.error(f"API request failed: {e}")
+            raise
 
-def analyze_user_history(user_profile: Dict, deepseek_caller: Callable) -> List[Dict]:
+def analyze_user_history(user_profile: Dict, qwen3_caller: Callable) -> List[Dict]:
     """
     Analyze user profile to infer interests using DeepSeek LLM.
     
     Args:
         user_profile: Dictionary containing user profile data
-        deepseek_caller: Function to call DeepSeek API
+        qwen3_caller: Function to call DeepSeek API
         
     Returns:
         List[Dict]: Inferred user interests
@@ -157,16 +185,25 @@ def analyze_user_history(user_profile: Dict, deepseek_caller: Callable) -> List[
     # Prepare prompt for profile analysis
     prompt = prepare_history_analysis_prompt(user_profile)
     
-    # Call DeepSeek LLM for analysis
-    response = deepseek_caller(prompt)
-    
+    # Call Qwen3 LLM for analysis
+    # print(prompt)
+    response = qwen3_caller(prompt)
     try:
+        # print(response.keys())
+        # breakpoint()
+        assert 'choices' in response, "Invalid response format: missing 'choices'"
         # Extract interest recommendations from response
         if "choices" not in response or not response["choices"]:
             logger.error("Invalid response format: missing 'choices'")
             return []
 
         content = response["choices"][0]["message"]["content"]
+        # print(content)
+        # breakpoint()
+        # skip the <think> </think> part
+        content = content.split("<think>")[1].split("</think>")[1].strip()  
+        # print(content)
+        # breakpoint()
         logger.info(f"Raw LLM response: {content[:200]}...")  # Log the first part of the response
         
         # Check if the response is "can't infer"
@@ -256,5 +293,60 @@ def analyze_user_history(user_profile: Dict, deepseek_caller: Callable) -> List[
         return []
     except Exception as e:
         logger.error(f"Error parsing inferred interests: {e}")
+        breakpoint()
         logger.error(f"Response content: {response.get('choices', [{}])[0].get('message', {}).get('content', '')[:500]}")
         return []
+
+def parse_raw_user_data(raw_data: str):
+    user_profile = {}
+
+    # Step 1: Split top-level fields
+    fields = raw_data.split('|')
+    for field in fields:
+        if ':' not in field:
+            continue
+        key, value = field.split(':', 1)
+        key = key.strip()
+        value = value.strip()
+
+        if key == "Age":
+            user_profile["Age"] = value
+        elif key == "Gender":
+            user_profile["Gender"] = value
+        elif key == "GPTQueryHistory":
+            interests = []
+            categories = value.split(';')
+            for category_entry in categories:
+                if ':' not in category_entry:
+                    continue
+                category, keywords_str = category_entry.split(':', 1)
+                keywords = [kw.strip() for kw in keywords_str.split(',') if kw.strip()]
+                interests.append({
+                    "category": category.strip(),
+                    "keywords": keywords
+                })
+            user_profile["Interests"] = interests
+
+    return user_profile
+
+
+if __name__ == "__main__":
+    users_path = '/nvmedata/chenw/genz/genz_users_20k_format.tsv'
+    df = pd.read_csv(users_path, sep='\t')
+    qwen_caller = Qwen3Caller(base_url="http://127.0.0.1:8000/v1")
+    # Start the performance test
+    start_time = time.time()
+    for i in range(len(df)):
+        user = df.iloc[i]
+        # convert to dict
+        user = user.to_dict()
+        user_profile = parse_raw_user_data(user['profile'])
+        # print(user_profile)
+        # break
+        analyze_user_history(user_profile, qwen_caller)
+        # break
+    end_time = time.time()
+    print(f"Time taken: {end_time - start_time} seconds")
+
+
+    
