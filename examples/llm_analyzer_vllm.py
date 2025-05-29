@@ -112,35 +112,35 @@ If no high-confidence interests can be determined, return "can't infer".
         ]
     }
 
-def resolve_ambiguities(inferred_interests: List[Dict], bing_api_key: str) -> List[Dict]:
-    """
-    Resolve any ambiguities in inferred interests by using Bing Search.
+# def resolve_ambiguities(inferred_interests: List[Dict], bing_api_key: str) -> List[Dict]:
+#     """
+#     Resolve any ambiguities in inferred interests by using Bing Search.
     
-    Args:
-        inferred_interests: List of inferred interests with potential ambiguities
-        bing_api_key: API key for Bing search
+#     Args:
+#         inferred_interests: List of inferred interests with potential ambiguities
+#         bing_api_key: API key for Bing search
         
-    Returns:
-        List[Dict]: Enhanced interests with ambiguities resolved
-    """
-    enriched_interests = []
+#     Returns:
+#         List[Dict]: Enhanced interests with ambiguities resolved
+#     """
+#     enriched_interests = []
     
-    for interest in inferred_interests:
-        # Check if the interest has ambiguities that need clarification
-        if interest.get('ambiguous', False) and 'clarification_needed' in interest:
-            ambiguous_topic = interest['clarification_needed']
-            logger.info(f"Resolving ambiguity: {ambiguous_topic}")
+#     for interest in inferred_interests:
+#         # Check if the interest has ambiguities that need clarification
+#         if interest.get('ambiguous', False) and 'clarification_needed' in interest:
+#             ambiguous_topic = interest['clarification_needed']
+#             logger.info(f"Resolving ambiguity: {ambiguous_topic}")
             
-            # Call Bing API to get context
-            context = search_bing_web(ambiguous_topic, bing_api_key)
+#             # Call Bing API to get context
+#             context = search_bing_web(ambiguous_topic, bing_api_key)
             
-            # Enrich the interest with the context
-            interest['context'] = context
-            interest['ambiguous'] = False
+#             # Enrich the interest with the context
+#             interest['context'] = context
+#             interest['ambiguous'] = False
             
-        enriched_interests.append(interest)
+#         enriched_interests.append(interest)
     
-    return enriched_interests
+#     return enriched_interests
 
 class Qwen3Caller:
     def __init__(self, base_url: str = 'http://127.0.0.1:8000/v1'):
