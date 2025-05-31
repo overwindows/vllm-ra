@@ -20,8 +20,9 @@ from typing import List, Dict, Any, Callable
 from openai import OpenAI
 # from content_retriever import search_bing_web
 import pandas as pd
+import tqdm
 # Configure logging
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.ERROR)
 logger = logging.getLogger(__name__)
 
 def prepare_history_analysis_prompt(user_profile: Dict) -> Dict:
@@ -144,11 +145,8 @@ If no high-confidence interests can be determined, return "can't infer".
 
 class Qwen3Caller:
     def __init__(self, base_url: str = 'http://127.0.0.1:8000/v1'):
-        self.client = OpenAI(
-            base_url=base_url,
-            api_key="token-abc123",
-        )
-    
+        self.client = OpenAI(base_url=base_url, api_key="not-needed")
+
     def __call__(self, messages: Dict) -> Dict:
         """
         Make the class callable to handle API requests.
@@ -163,11 +161,12 @@ class Qwen3Caller:
             # Extract the messages list from the dictionary
             messages_list = messages.get("messages", [])
             completion = self.client.chat.completions.create(
-                model="/nvmedata/hf_checkpoints/Qwen3-8B/",
+                # model="/nvmedata/hf_checkpoints/Qwen3-8B/",
+                model="/nvmedata/hf_checkpoints/Qwen3-32B/",
                 messages=messages_list,
-                # extra_body={"chat_template_kwargs": {"enable_thinking": False}}
+                extra_body={"chat_template_kwargs": {"enable_thinking": False}}
             )
-            return completion.dict()
+            return completion.model_dump()
         except Exception as e:
             logger.error(f"API request failed: {e}")
             raise
@@ -200,9 +199,8 @@ def analyze_user_history(user_profile: Dict, qwen3_caller: Callable) -> List[Dic
 
         content = response["choices"][0]["message"]["content"]
         # print(content)
-        # breakpoint()
         # skip the <think> </think> part
-        content = content.split("<think>")[1].split("</think>")[1].strip()  
+        # content = content.split("<think>")[1].split("</think>")[1].strip()  
         # print(content)
         # breakpoint()
         logger.info(f"Raw LLM response: {content[:200]}...")  # Log the first part of the response
@@ -337,7 +335,7 @@ if __name__ == "__main__":
     qwen_caller = Qwen3Caller(base_url="http://127.0.0.1:8000/v1")
     # Start the performance test
     start_time = time.time()
-    for i in range(len(df)):
+    for i in tqdm.tqdm(range(len(df))):
         user = df.iloc[i]
         # convert to dict
         user = user.to_dict()
