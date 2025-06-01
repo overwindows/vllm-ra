@@ -11,6 +11,7 @@ class VLLMOAAS:
         # self.model_id = 'Qwen/Qwen3-32B'
         # self.model_id = "/Model"
         # self.model_id = 'microsoft/Phi-3.5-mini-instruct'
+        self.model_id = '/nvmedata/hf_checkpoints/Qwen3-8B/'
         from vllm.engine.async_llm_engine import AsyncLLMEngine
         from vllm.engine.arg_utils import AsyncEngineArgs
         

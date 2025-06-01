@@ -29,9 +29,9 @@ class VLLMOAAS:
         self.device = torch.device(
             'cuda' if torch.cuda.is_available() else 'cpu')
         print(f"Using device: {self.device}")
-        self.model_id = 'mistralai/Mistral-7B-Instruct-v0.3'
+        # self.model_id = 'mistralai/Mistral-7B-Instruct-v0.3'
         # self.model_id = 'microsoft/Phi-3.5-mini-instruct'
-        # self.model_id = 'Qwen/Qwen3-32B'
+        self.model_id = '/nvmedata/hf_checkpoints/Qwen3-8B/'
         self.engine = LLM(model=self.model_id, 
                           trust_remote_code=True,
                           enable_prefix_caching=True, 
