@@ -340,8 +340,6 @@ if __name__ == "__main__":
         # convert to dict
         user = user.to_dict()
         user_profile = parse_raw_user_data(user['profile'])
-        # print(user_profile)
-        # break
         analyze_user_history(user_profile, qwen_caller)
         # break
     end_time = time.time()
