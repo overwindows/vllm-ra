@@ -147,6 +147,7 @@ class VLLMOAAS:
     def __init__(self, model_path: str = "/nvmedata/hf_checkpoints/Qwen3-32B/"):
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         print(f"Using device: {self.device}")
+        self.tokenizer = AutoTokenizer.from_pretrained(model_path, trust_remote_code=True)
         self.llm = LLM(
             model=model_path,
             trust_remote_code=True,
@@ -174,21 +175,38 @@ class VLLMOAAS:
         Returns:
             Dict: Model response containing the output
         """
+        assert isinstance(messages, dict), "Messages must be a dictionary"
+        assert "messages" in messages, "Messages must contain a 'messages' key"
+        assert isinstance(messages["messages"], list), "Messages must contain a list of messages"
+        assert all(isinstance(msg, dict) for msg in messages["messages"]), "Messages must contain a list of dictionaries"
+        assert all("role" in msg and "content" in msg for msg in messages["messages"]), "Messages must contain a 'role' and 'content' key"
+        assert all(msg["role"] in ["system", "user"] for msg in messages["messages"]), "Messages must contain a 'role' of 'system' or 'user'"
+        assert all(isinstance(msg["content"], str) for msg in messages["messages"]), "Messages must contain a 'content' of type string"
         try:
             # Convert messages to a single prompt string
-            prompt = ""
-            for msg in messages["messages"]:
-                if msg["role"] == "system":
-                    prompt += f"System: {msg['content']}\n\n"
-                elif msg["role"] == "user":
-                    prompt += f"User: {msg['content']}\n\n"
+            # prompt = ""
+            # for msg in messages["messages"]:
+            #     if msg["role"] == "system":
+            #         prompt += f"System: {msg['content']}\n\n"
+            #     elif msg["role"] == "user":
+            #         prompt += f"User: {msg['content']}\n\n"
             
-            # Add assistant prefix
-            prompt += "Assistant: "
+            # # Add assistant prefix
+            # prompt += "Assistant: "
             
+            # apply chat template
+            prompt = self.tokenizer.apply_chat_template(
+                messages["messages"],
+                tokenize=False,
+                add_generation_prompt=True,
+                enable_thinking=False
+            )
+            
+            # print(prompt)
+            # breakpoint()
             outputs = self.llm.generate(prompt, self.sampling_params)
             response = outputs[0].outputs[0].text
-            
+            # print(response)
             # Format response to match the expected structure
             return {
                 "choices": [{
@@ -213,7 +231,7 @@ def analyze_user_history(user_profile: Dict, llm_caller: Callable) -> List[Dict]
         List[Dict]: Inferred user interests
     """
     prompt = prepare_history_analysis_prompt(user_profile)
-    print(prompt)
+    # print(prompt)
     response = llm_caller(prompt)
     
     try:
@@ -324,5 +342,6 @@ if __name__ == "__main__":
         user = df.iloc[i].to_dict()
         user_profile = parse_raw_user_data(user['profile'])
         analyze_user_history(user_profile, llm_caller)
+        # break
     end_time = time.time()
     print(f"Time taken: {end_time - start_time} seconds") 
