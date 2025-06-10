@@ -29,7 +29,7 @@ import tqdm
 import torch
 
 # Configure logging
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.ERROR)
 logger = logging.getLogger(__name__)
 
 def prepare_history_analysis_prompt(user_profile: Dict) -> Dict:
@@ -241,7 +241,7 @@ def analyze_user_history(user_profile: Dict, llm_caller: Callable) -> List[Dict]
             return []
 
         content = response["choices"][0]["message"]["content"]
-        logger.info(f"Raw LLM response: {content[:200]}...")
+        # logger.info(f"Raw LLM response: {content[:200]}...")
         
         if "can't infer" in content.lower():
             logger.warning("LLM couldn't infer any interests from the provided history")

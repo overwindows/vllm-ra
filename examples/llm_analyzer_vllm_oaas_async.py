@@ -28,9 +28,10 @@ import pandas as pd
 import tqdm
 import torch
 from uuid import uuid4
+import argparse
 
 # Configure logging
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.ERROR)
 logger = logging.getLogger(__name__)
 
 
@@ -363,14 +364,22 @@ async def process_batch(batch: List[Dict], llm_caller: Callable) -> List[List[Di
     return await asyncio.gather(*tasks)
 
 
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--input_path", type=str, default="../data/genz_users_20k_format.tsv")
+    parser.add_argument("--output_path", type=str, default="../output/genz_users_interests_vllm_oaas_async.jsonl")
+    parser.add_argument("--model_path", type=str, default="../models/Qwen3-8B")
+    parser.add_argument("--batch_size", type=int, default=8)
+    return parser.parse_args()
+
+
 async def main():
-    users_path = '../data/genz_users_20k_format.tsv'
-    output_path = '../output/genz_users_interests_vllm_oaas_async.jsonl'
-    df = pd.read_csv(users_path, sep='\t')
-    llm_caller = VLLMOAAS(model_path="../models/Qwen3-8B")
+    args = parse_args()
+    df = pd.read_csv(args.input_path, sep='\t')
+    llm_caller = VLLMOAAS(model_path=args.model_path)
 
     # Process users in batches
-    batch_size = 8  # Adjust based on your GPU memory and performance needs
+    batch_size = args.batch_size  # Adjust based on your GPU memory and performance needs
     start_time = time.time()
 
     for i in tqdm.tqdm(range(0, len(df), batch_size)):
@@ -378,7 +387,7 @@ async def main():
         user_profiles = [parse_raw_user_data(
             user['profile']) for _, user in batch.iterrows()]
         results = await process_batch(user_profiles, llm_caller)
-        with open(output_path, 'a') as f:
+        with open(args.output_path, 'a') as f:
             for result in results:
                 for interest in result:
                     f.write(json.dumps(interest) + '\n')
