@@ -34,6 +34,11 @@ import argparse
 logging.basicConfig(level=logging.ERROR)
 logger = logging.getLogger(__name__)
 
+# Set vLLM logger level
+from vllm.logger import init_logger
+vllm_logger = init_logger(__name__)
+vllm_logger.setLevel(logging.ERROR)
+
 
 def prepare_history_analysis_prompt(user_profile: Dict) -> Dict:
     """
@@ -165,7 +170,9 @@ class VLLMOAAS:
             gpu_memory_utilization=0.95,
             max_num_batched_tokens=4096,
             max_num_seqs=512,
-            swap_space=8
+            swap_space=8,
+            disable_log_stats=True,
+            disable_log_requests=True
         )
         self.engine = AsyncLLMEngine.from_engine_args(engine_args)
 
@@ -261,7 +268,7 @@ async def analyze_user_history(user_profile: Dict, llm_caller: Callable) -> List
 
         content = response["choices"][0]["message"]["content"]
         logger.info(f"Raw LLM response: {content[:200]}...")
-
+        
         if "can't infer" in content.lower():
             logger.warning(
                 "LLM couldn't infer any interests from the provided history")
@@ -269,6 +276,7 @@ async def analyze_user_history(user_profile: Dict, llm_caller: Callable) -> List
 
         # Extract JSON from the content
         json_str = content
+        return []
         if "```json" in content:
             json_str = content.split("```json")[1].split("```")[0].strip()
         elif "```" in content:
@@ -285,6 +293,7 @@ async def analyze_user_history(user_profile: Dict, llm_caller: Callable) -> List
         except json.JSONDecodeError as json_err:
             logger.error(
                 f"JSON decode error: {json_err}. Attempting to clean and retry...")
+            # logger.error(f"Raw JSON string: {json_str}")    
             cleaned_json_str = json_str.replace("'", '"').replace("\\", "\\\\")
             inferred_interests = json.loads(cleaned_json_str)
 

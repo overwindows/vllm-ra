@@ -34,6 +34,10 @@ import argparse
 logging.basicConfig(level=logging.ERROR)
 logger = logging.getLogger(__name__)
 
+# Set vLLM logger level
+from vllm.logger import init_logger
+vllm_logger = init_logger(__name__)
+vllm_logger.setLevel(logging.ERROR)
 
 def prepare_history_analysis_prompt(user_profile: Dict) -> Dict:
     """
@@ -150,9 +154,7 @@ Do NOT recommend:
 
 class VLLMOAAS:
     def __init__(self, model_path: str = "/nvmedata/hf_checkpoints/Qwen3-32B/", 
-                 use_relay_attention: bool = True,
-                 relay_attention_window_size: int = 4096,
-                 relay_attention_stride: int = 1024):
+                 enable_relay_attention: bool = True):
         self.device = torch.device(
             'cuda' if torch.cuda.is_available() else 'cpu')
         print(f"Using device: {self.device}")
@@ -170,12 +172,12 @@ class VLLMOAAS:
             max_num_batched_tokens=8192,
             max_num_seqs=512,
             swap_space=8,
-            # Add relay attention parameters
-            # use_relay_attention=use_relay_attention,
-            # relay_attention_window_size=relay_attention_window_size,
-            # relay_attention_stride=relay_attention_stride,
+            disable_log_stats=True,
+            disable_log_requests=True,
+            # Add relay attention parameter (correct parameter name)
+            enable_relay_attention=enable_relay_attention,
             # Add additional parameters for better performance
-            max_model_len=8192,  # Set a reasonable max model length
+            max_model_len=4096,  # Set a reasonable max model length
             quantization=None,  # Disable quantization for better compatibility
             enforce_eager=True  # Enable eager mode for better debugging
         )
@@ -272,7 +274,7 @@ async def analyze_user_history(user_profile: Dict, llm_caller: Callable) -> List
             return []
 
         content = response["choices"][0]["message"]["content"]
-        logger.info(f"Raw LLM response: {content[:200]}...")
+        # logger.info(f"Raw LLM response: {content[:200]}...")
 
         if "can't infer" in content.lower():
             logger.warning(
@@ -281,6 +283,9 @@ async def analyze_user_history(user_profile: Dict, llm_caller: Callable) -> List
 
         # Extract JSON from the content
         json_str = content
+
+        return []
+        
         if "```json" in content:
             json_str = content.split("```json")[1].split("```")[0].strip()
         elif "```" in content:
@@ -382,10 +387,8 @@ def parse_args():
     parser.add_argument("--output_path", type=str, default="../output/genz_users_interests_vllm_oaas_async_ra.jsonl")
     parser.add_argument("--model_path", type=str, default="../models/Qwen3-8B")
     parser.add_argument("--batch_size", type=int, default=8)
-    # Add relay attention arguments with optimized defaults
-    parser.add_argument("--use_relay_attention", action="store_true", default=True, help="Enable relay attention")
-    parser.add_argument("--relay_attention_window_size", type=int, default=4096, help="Window size for relay attention")
-    parser.add_argument("--relay_attention_stride", type=int, default=1024, help="Stride for relay attention")
+    # Add relay attention argument with correct parameter name
+    parser.add_argument("--enable_relay_attention", action="store_true", default=True, help="Enable relay attention")
     # Add additional configuration arguments
     parser.add_argument("--max_num_batched_tokens", type=int, default=8192, help="Maximum number of batched tokens")
     parser.add_argument("--max_model_len", type=int, default=8192, help="Maximum model length")
@@ -394,30 +397,10 @@ def parse_args():
 
 async def main():
     args = parse_args()
-    try:
-        # First try to read the file manually to check its format
-        with open(args.input_path, 'r') as f:
-            header = f.readline().strip().split('\t')
-            data = []
-            for line in f:
-                data.append(line.strip().split('\t'))
-        
-        # Create DataFrame manually
-        df = pd.DataFrame(data, columns=header)
-        
-        # Convert all columns to string type to avoid numpy conversion issues
-        for col in df.columns:
-            df[col] = df[col].astype(str)
-            
-    except Exception as e:
-        print(f"Error reading file: {e}")
-        raise
-    
+    df = pd.read_csv(args.input_path, sep='\t')
     llm_caller = VLLMOAAS(
         model_path=args.model_path,
-        use_relay_attention=args.use_relay_attention,
-        relay_attention_window_size=args.relay_attention_window_size,
-        relay_attention_stride=args.relay_attention_stride
+        enable_relay_attention=args.enable_relay_attention
     )
 
     # Process users in batches
