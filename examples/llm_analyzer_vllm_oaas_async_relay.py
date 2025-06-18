@@ -121,8 +121,14 @@ If no high-confidence interests can be determined, return "can't infer".
     return {
         "messages": [
             {
-                "role": "system",
-                "content": """You are an advanced AI model specializing in analyzing user profiles to infer high-confidence, diverse, and valuable niche interests for ongoing tracking and content recommendation.
+                "role": "user",
+                "content": prompt_content
+            }
+        ]
+    }
+
+# Define the system prompt as a constant
+SYSTEM_PROMPT = """You are an advanced AI model specializing in analyzing user profiles to infer high-confidence, diverse, and valuable niche interests for ongoing tracking and content recommendation.
 
 Your recommendations must:
 - Be based on clear evidence from the user's profile
@@ -143,14 +149,6 @@ Do NOT recommend:
 - Topics unlikely to have fresh future content
 - Generic, non-personalized categories
 - Low-confidence inferences based on limited evidence"""
-            },
-            {
-                "role": "user",
-                "content": prompt_content
-            }
-        ]
-    }
-
 
 class VLLMOAAS:
     def __init__(self, model_path: str = "/nvmedata/hf_checkpoints/Qwen3-32B/", 
@@ -161,6 +159,9 @@ class VLLMOAAS:
         self.tokenizer = AutoTokenizer.from_pretrained(
             model_path, trust_remote_code=True)
 
+        tokens = self.tokenizer.encode(SYSTEM_PROMPT)
+        print(f"System prompt token count: {len(tokens)}")
+        
         # Initialize Async Engine with relay attention support
         engine_args = AsyncEngineArgs(
             model=model_path,
@@ -176,6 +177,9 @@ class VLLMOAAS:
             disable_log_requests=True,
             # Add relay attention parameter (correct parameter name)
             enable_relay_attention=enable_relay_attention,
+            # Add system prompt for relay attention
+            sys_prompt=SYSTEM_PROMPT,
+            sys_schema="<<SYS>>\n{__SYS_PROMPT}\n<</SYS>>\n\n{__USR_PROMPT}",
             # Add additional parameters for better performance
             max_model_len=4096,  # Set a reasonable max model length
             quantization=None,  # Disable quantization for better compatibility
@@ -386,9 +390,9 @@ def parse_args():
     parser.add_argument("--input_path", type=str, default="../data/genz_users_20k_format.tsv")
     parser.add_argument("--output_path", type=str, default="../output/genz_users_interests_vllm_oaas_async_ra.jsonl")
     parser.add_argument("--model_path", type=str, default="../models/Qwen3-8B")
-    parser.add_argument("--batch_size", type=int, default=8)
+    parser.add_argument("--batch_size", type=int, default=64)  # Increased default batch size
     # Add relay attention argument with correct parameter name
-    parser.add_argument("--enable_relay_attention", action="store_true", default=True, help="Enable relay attention")
+    parser.add_argument("--enable_relay_attention", action="store_true")
     # Add additional configuration arguments
     parser.add_argument("--max_num_batched_tokens", type=int, default=8192, help="Maximum number of batched tokens")
     parser.add_argument("--max_model_len", type=int, default=8192, help="Maximum model length")
