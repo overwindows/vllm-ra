@@ -165,10 +165,11 @@ class VLLMOAAS:
         engine_args = AsyncEngineArgs(
             model=model_path,
             trust_remote_code=True,
-            tensor_parallel_size=1,
+            tensor_parallel_size=2,
             dtype="bfloat16",
             gpu_memory_utilization=0.95,
-            max_num_batched_tokens=4096,
+            max_num_batched_tokens=16384,
+            enable_chunked_prefill=True,
             max_num_seqs=512,
             swap_space=8,
             disable_log_stats=True,
@@ -177,14 +178,14 @@ class VLLMOAAS:
         self.engine = AsyncLLMEngine.from_engine_args(engine_args)
 
         self.sampling_params = SamplingParams(
-            temperature=0.7,
+            temperature=0.0,
             top_p=1.0,
             max_tokens=2048,
-            stop=None
+            stop=None,
         )
 
         # Semaphore to limit concurrent requests
-        self.semaphore = asyncio.Semaphore(8)
+        self.semaphore = asyncio.Semaphore(16)
 
     async def __call__(self, messages: Dict) -> Dict:
         """
@@ -276,7 +277,6 @@ async def analyze_user_history(user_profile: Dict, llm_caller: Callable) -> List
 
         # Extract JSON from the content
         json_str = content
-        return []
         if "```json" in content:
             json_str = content.split("```json")[1].split("```")[0].strip()
         elif "```" in content:
