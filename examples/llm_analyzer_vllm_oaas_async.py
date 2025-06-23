@@ -29,6 +29,7 @@ import tqdm
 import torch
 from uuid import uuid4
 import argparse
+import pathlib
 
 # Configure logging
 logging.basicConfig(level=logging.ERROR)
@@ -398,8 +399,7 @@ async def main():
         results = await process_batch(user_profiles, llm_caller)
         with open(args.output_path, 'a') as f:
             for result in results:
-                for interest in result:
-                    f.write(json.dumps(interest) + '\n')
+                f.write(json.dumps(result) + '\n')
     end_time = time.time()
     print(f"Time taken: {end_time - start_time} seconds")
 
