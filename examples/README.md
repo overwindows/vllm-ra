@@ -54,3 +54,22 @@ For more detailed information about specific examples, please refer to the comme
 ## Requirements
 
 Make sure you have vLLM installed and configured properly before running these examples. Some examples may require additional dependencies which are listed in their respective files.
+
+## Environment Setup
+
+The environment has been set up using the `vllm_env.yml` file which has already been exported. This file contains all the necessary dependencies and configurations for running the vLLM examples.
+
+To activate the environment (if not already active):
+
+```bash
+conda activate vllm_env
+```
+
+If you need to recreate the environment from the yml file:
+
+```bash
+conda env create -f vllm_env.yml
+conda activate vllm_env
+```
+
+The environment includes all required packages for running the examples in this directory.
