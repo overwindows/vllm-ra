@@ -82,6 +82,39 @@ def prepare_history_analysis_prompt(user_profile: Dict) -> Dict:
 Summarized topics from user browsing and search history (order by recency and strength of interest):
 {interests_list}
 
+"""
+    return {
+        "messages": [
+            {
+                "role": "user",
+                "content": prompt_content
+            }
+        ]
+    }
+
+# Define the system prompt as a constant
+SYSTEM_PROMPT = """You are an advanced AI model specializing in analyzing user profiles to infer high-confidence, diverse, and valuable niche interests for ongoing tracking and content recommendation.
+
+Your recommendations must:
+- Be based on clear evidence from the user's profile
+- Have ongoing relevance, with new content regularly published
+- Be uniquely tailored to the user's actual interests (not generic topics)
+- Enable highly personalized content recommendations
+
+When analyzing user profile:
+1. Prioritize recent and repeated activities
+2. Identify patterns indicating sustained or growing interest
+3. Focus on specific niches, not broad categories
+4. Recommend topics where tracking future developments will benefit the user
+5. Ensure each recommended interest is meaningfully different from the others
+
+Do NOT recommend:
+- Adult, offensive, or crime-related topics
+- One-off or transient interests
+- Topics unlikely to have fresh future content
+- Generic, non-personalized categories
+- Low-confidence inferences based on limited evidence
+
 Your task:
 - Identify 1-5 high-confidence, distinct, and valuable niche interests worth tracking over time.
 - Only include interests if you are highly confident, based on clear evidence in the profile.
@@ -117,38 +150,8 @@ Return the result as JSON in this format:
 ]
 
 If no high-confidence interests can be determined, return "can't infer".
+
 """
-    return {
-        "messages": [
-            {
-                "role": "user",
-                "content": prompt_content
-            }
-        ]
-    }
-
-# Define the system prompt as a constant
-SYSTEM_PROMPT = """You are an advanced AI model specializing in analyzing user profiles to infer high-confidence, diverse, and valuable niche interests for ongoing tracking and content recommendation.
-
-Your recommendations must:
-- Be based on clear evidence from the user's profile
-- Have ongoing relevance, with new content regularly published
-- Be uniquely tailored to the user's actual interests (not generic topics)
-- Enable highly personalized content recommendations
-
-When analyzing user profile:
-1. Prioritize recent and repeated activities
-2. Identify patterns indicating sustained or growing interest
-3. Focus on specific niches, not broad categories
-4. Recommend topics where tracking future developments will benefit the user
-5. Ensure each recommended interest is meaningfully different from the others
-
-Do NOT recommend:
-- Adult, offensive, or crime-related topics
-- One-off or transient interests
-- Topics unlikely to have fresh future content
-- Generic, non-personalized categories
-- Low-confidence inferences based on limited evidence"""
 
 class VLLMOAAS:
     def __init__(self, model_path: str = "/nvmedata/hf_checkpoints/Qwen3-32B/", 
@@ -166,7 +169,7 @@ class VLLMOAAS:
         engine_args = AsyncEngineArgs(
             model=model_path,
             trust_remote_code=True,
-            tensor_parallel_size=1,
+            tensor_parallel_size=2,
             dtype="bfloat16",
             gpu_memory_utilization=0.95,
             # Increase max_num_batched_tokens to match or exceed max_model_len
@@ -183,7 +186,7 @@ class VLLMOAAS:
             # Add additional parameters for better performance
             max_model_len=4096,  # Set a reasonable max model length
             quantization=None,  # Disable quantization for better compatibility
-            enforce_eager=True  # Enable eager mode for better debugging
+            # enforce_eager=True  # Enable eager mode for better debugging
         )
         self.engine = AsyncLLMEngine.from_engine_args(engine_args)
 
@@ -191,7 +194,7 @@ class VLLMOAAS:
             temperature=0.7,
             top_p=1.0,
             max_tokens=2048,
-            stop=None
+            stop=None,
         )
 
         # Semaphore to limit concurrent requests
